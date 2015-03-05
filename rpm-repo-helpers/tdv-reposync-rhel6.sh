@@ -2,7 +2,7 @@
 #set -x
 
 ##
-#Copyright 2013-2014, Franck Villaume - TrivialDev
+#Copyright 2013-2015, Franck Villaume - TrivialDev
 #
 # This file is part of TrivialDev Utilities.
 #
@@ -44,16 +44,16 @@ LOCKFILEPATH_BASE=/var/run/
 REPOSYNC_PATH=/data/rhn
 #REPOSYNC_REPOID="rhel-x86_64-server-6 rhel-x86_64-server-supplementary-6 rhel-x86_64-server-optional-6 rhel-x86_64-server-ha-6"
 REPOSYNC_REPOID="rhel-x86_64-server-6"
-RSYNC_DESTPATH_PACKAGES=rhel6-updatein
-RSYNC_DESTPATH_META=rhel6-metadatain
-RSYNC_DESTPATH_LOCK=rhnlock6
+RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel6-x86_64/updates.in/Packages
+RSYNC_DESTPATH_META=/data/httpd/rhel6-x86_64/metadata.in
+RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn6
 RSYNC_DESTIP=
 USEMETA=1
 VERBOSE=0
 CLEAN=0
-REPOMETAOPTION=''
+REPOMETAOPTION=' --download-metadata'
 
-OPTS=$( getopt -o hcvp:r:lni: -l help,clean,verbose,path:,repo:,lock,nometa,iprsync: -- "$@" )
+OPTS=$( getopt -o hcvp:r:li:n -l help,clean,verbose,path:,repo:,lock,iprsync:,nometa -- "$@" )
 if [[ $? != 0 ]]; then
 	echo "Missing getopt or wrong arguments."
 	usage
@@ -88,12 +88,14 @@ while true ; do
 			;;
 		-n|--nometa)
 			USEMETA=0
-			REPOMETAOPTION=' --download-metadata'
+			REPOMETAOPTION=''
 			shift 1
 			;;
 		-i|--iprsync)
-			#add :: after the ip or fqdn to use with rsync.
 			RSYNC_DESTIP=$2'::'
+			RSYNC_DESTPATH_PACKAGES=rhel6-updatein
+			RSYNC_DESTPATH_META=rhel6-metadatain
+			RSYNC_DESTPATH_LOCK=rhnlock6
 			shift 2
 			;;
 		--)
@@ -103,6 +105,8 @@ while true ; do
 	esac
 done
 
+exit 0
+
 if [[ ${VERBOSE} != 1 ]];then
 	exec 1>/dev/null
 	exec 2>/dev/null
@@ -110,6 +114,12 @@ fi
 
 if [[ ! -d ${LOCKFILEPATH_BASE}/rsync/rhn6 ]];then
 	mkdir -p ${LOCKFILEPATH_BASE}/rsync/rhn6
+fi
+
+if [[ -z ${RSYNC_DESTIP} ]];then
+	mkdir -p ${RSYNC_DESTPATH_PACKAGES}
+	mkdir -p ${RSYNC_DESTPATH_META}
+	mkdir -p ${RSYNC_DESTPATH_LOCK}
 fi
 
 if [[ -f /etc/yum/pluginconf.d/rhnplugin.conf && ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable && ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable ]];then
