@@ -2,7 +2,7 @@
 #set -x
 
 ##
-#Copyright 2013-2014, Franck Villaume - TrivialDev
+#Copyright 2013-2015, Franck Villaume - TrivialDev
 #
 # This file is part of TrivialDev Utilities.
 #
@@ -102,14 +102,14 @@ if [[ ${CLEAN} == 0 ]];then
 		exit 0
 	fi
 
-	LSUPDATESINFOXMLGZ=`ls ${REPOPATH_BASE}/updates.in/*updateinfo.xml.gz >/dev/null 2>&1`
+	LSUPDATESINFOXMLGZ=`find ${REPOPATH_BASE}/metadata.in/ "*updateinfo.xml.gz"`
 	if [[ ${USEMETA} != 0 && -z ${LSUPDATESINFOXMLGZ} ]];then
 		if [[ ${VERBOSE} != 0 ]];then
 			echo "Missing metadata."
 		fi
 		exit 0
 	fi
-	
+
 	CREATEREPOVERSION=`createrepo --version | cut -f2 -d' '`
 	case "${CREATEREPOVERSION}" in
 		0.9.8)
@@ -125,7 +125,7 @@ if [[ ${CLEAN} == 0 ]];then
 	if [[ 'z'${REPOID} == 'z' ]];then
 		REPOID=`ls -1 ${REPOPATH_BASE}`
 	fi
-	
+
 	if [[ ${USEMETA} != 0 ]];then
 		for each in ${REPOID}; do
 			if [[ ${each} != 'os' && ${each} != 'tierces' ]]; then
