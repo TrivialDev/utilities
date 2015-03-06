@@ -22,18 +22,21 @@
 
 ##
 # This script allows you to sync data from an existing repoid to a local copy (on the same server or a distant server)
+# RHEL5, RHEL6 & RHEL7 supported
+# With this script you can use Spacewalk server at an alternative to RedHat Official Satellite.
 ##
 
 function usage() {
-	echo "$0 [-h|--help] [-v|--verbose] [-c|--clean] [-p|--path repository_path] [-r|--repo repository] [-l|--lock lockpath] [-n|--nometa] [-i|--iprsync ip_address"
-	echo " -h|--help    : print this help & exit."
-	echo " -v|--verbose : print more informations."
-	echo " -c|--clean   : remove lock file & exit."
-	echo " -p|--path    : set path of the repositories. Default is /data/rhn."
-	echo " -r|--repo    : sync this rhn channel only."
-	echo " -l|--lock    : set lockpath. Default is /var/run. If you use another path, set correct path for rsync daemon."
-	echo " -n|--nometa  : disable the retrieve of metadata. Result: the yum list-security plugin will return empty."
-	echo " -i|--iprsync : use this IP address / Hostname as rsync destination. Optional. By default, the sync stays locally."
+	echo "$0 [-h|--help] [-v|--verbose] [-c|--clean] [-p|--path repository_path] [-r|--repo repository] [-l|--lock lockpath] [-n|--nometa] [-i|--iprsync ip_address] [-o|--oldcompat]"
+	echo " -h|--help     : print this help & exit."
+	echo " -v|--verbose  : print more informations."
+	echo " -c|--clean    : remove lock file & exit."
+	echo " -p|--path     : set path of the repositories. Default is /data/rhn."
+	echo " -r|--repo     : sync this rhn channel only."
+	echo " -l|--lock     : set lockpath. Default is /var/run. If you use another path, set correct path for rsync daemon."
+	echo " -n|--nometa   : disable the retrieve of metadata. Result: the yum list-security plugin will return empty."
+	echo " -i|--iprsync  : use this IP address / Hostname as rsync destination. Optional. By default, the sync stays locally."
+	echo " -o|--oldcompat: be compatible with old tree RHEL5 & RHEL6"
 	echo "example:"
 	echo "  Sync the channel rhel-x86_64-server-6 only and rsync to another server."
 	echo "  $0 -v -r rhel-x86_64-server-6 -i distantserver.fqdn"
@@ -51,8 +54,9 @@ USEMETA=1
 VERBOSE=0
 CLEAN=0
 REPOMETAOPTION=' --download-metadata'
+USEGETPACKAGE=''
 
-OPTS=$( getopt -o hcvp:r:li:n -l help,clean,verbose,path:,repo:,lock,iprsync:,nometa -- "$@" )
+OPTS=$( getopt -o hcvp:r:li:no -l help,clean,verbose,path:,repo:,lock,iprsync:,nometa,oldcompat -- "$@" )
 if [[ $? != 0 ]]; then
 	echo "Missing getopt or wrong arguments."
 	usage
@@ -97,14 +101,14 @@ while true ; do
 			RSYNC_DESTPATH_LOCK=rhnlock6
 			shift 2
 			;;
+		-o|--oldcompat)
+			USEGETPACKAGE='/getPackage'
 		--)
 			shift
 			break
 			;;
 	esac
 done
-
-exit 0
 
 if [[ ${VERBOSE} != 1 ]];then
 	exec 1>/dev/null
@@ -159,10 +163,10 @@ if [[ ${CLEAN} == 0 ]];then
 			echo "Sync rpms for channel "${each}
 		fi
 		rm -rf /var/cache/yum/x86_64/6Server/${each}
-		mkdir -p ${REPOSYNC_PATH}/${each}/getPackage
+		mkdir -p ${REPOSYNC_PATH}/${each}${USEGETPACKAGE}
 		reposync ${REPOMETAOPTION} -p ${REPOSYNC_PATH} --repoid=${each} -a x86_64 -l
 		reposync -p ${REPOSYNC_PATH} --repoid=${each} -a i686 -l
-		rsync -az --force --progress --ignore-errors ${REPOSYNC_PATH}/${each}/getPackage/ ${RSYNC_DESTIP}${RSYNC_DESTPATH_PACKAGES}
+		rsync -az --force --progress --ignore-errors ${REPOSYNC_PATH}/${each}${USEGETPACKAGE}/ ${RSYNC_DESTIP}${RSYNC_DESTPATH_PACKAGES}
 		if [[ ${USEMETA} != 0 ]];then
 			if [[ ${VERBOSE} != 0 ]];then
 				echo "Sync metadata for channel "${each}
