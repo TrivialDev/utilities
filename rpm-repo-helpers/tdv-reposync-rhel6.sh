@@ -38,7 +38,6 @@ function usage() {
 	echo "  Sync the channel rhel-x86_64-server-6 only and rsync to another server."
 	echo "  $0 -v -r rhel-x86_64-server-6 -i distantserver.fqdn"
 }
-
 SCRIPTNAME=`basename ${0}`
 LOCKFILEPATH_BASE=/var/run/
 REPOSYNC_PATH=/data/rhn
@@ -122,16 +121,16 @@ if [[ -z ${RSYNC_DESTIP} ]];then
 	mkdir -p ${RSYNC_DESTPATH_LOCK}
 fi
 
-if [[ -f /etc/yum/pluginconf.d/rhnplugin.conf && ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable && ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable ]];then
+if [[ ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable && ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable ]];then
 	cd /etc/yum/pluginconf.d
-	echo >>rhnplugin.conf.enable<<EOF
+	cat << EOF >rhnplugin.conf.enable
 [main]
-enable=1
+enabled=1
 gpgcheck=1
 EOF
-	echo >>rhnplugin.conf.disable<<EOF
+	cat << EOF >rhnplugin.conf.disable
 [main]
-enable=0
+enabled=0
 gpgcheck=1
 EOF
 	rm -f rhnplugin.conf
