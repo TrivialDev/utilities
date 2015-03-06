@@ -102,7 +102,7 @@ if [[ ${CLEAN} == 0 ]];then
 		exit 0
 	fi
 
-	LSUPDATESINFOXMLGZ=`find ${REPOPATH_BASE}/metadata.in/ "*updateinfo.xml.gz"`
+	LSUPDATESINFOXMLGZ=`ls -1 ${REPOPATH_BASE}/metadata.in/ | grep updateinfo.xml.gz`
 	if [[ ${USEMETA} != 0 && -z ${LSUPDATESINFOXMLGZ} ]];then
 		if [[ ${VERBOSE} != 0 ]];then
 			echo "Missing metadata."
@@ -128,8 +128,8 @@ if [[ ${CLEAN} == 0 ]];then
 
 	if [[ ${USEMETA} != 0 ]];then
 		for each in ${REPOID}; do
-			if [[ ${each} != 'os' && ${each} != 'tierces' ]]; then
-				cp ${REPOPATH_BASE}/metadata.in/*updateinfo.xml.gz ${REPOPATH_BASE}/${each}/
+			if [[ ${each} != 'os' && ${each} != 'tierces' && ${each} != 'metadata.in' ]]; then
+				cp -f ${REPOPATH_BASE}/metadata.in/*updateinfo.xml.gz ${REPOPATH_BASE}/${each}/
 			fi
 		done
 	fi
