@@ -123,12 +123,12 @@ if [[ ${CLEAN} == 0 ]];then
 	touch ${LOCKFILEPATH_BASE}/${SCRIPTNAME}
 
 	if [[ 'z'${REPOID} == 'z' ]];then
-		REPOID=`ls -1 ${REPOPATH_BASE}`
+		REPOID=`ls -1 ${REPOPATH_BASE} | grep -v 'metadata.in'`
 	fi
 
 	if [[ ${USEMETA} != 0 ]];then
 		for each in ${REPOID}; do
-			if [[ ${each} != 'os' && ${each} != 'tierces' && ${each} != 'metadata.in' ]]; then
+			if [[ ${each} != 'os' && ${each} != 'tierces' ]]; then
 				cp -f ${REPOPATH_BASE}/metadata.in/*updateinfo.xml.gz ${REPOPATH_BASE}/${each}/
 			fi
 		done
