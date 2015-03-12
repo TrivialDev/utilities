@@ -104,6 +104,31 @@ while true ; do
 	esac
 done
 
+#subscription managing functions:
+enable_rhn() {
+        #disable Spacewalk
+        for file in ${SPACEWALK_FILES}; do
+                unlink "${file%.keep}"
+        done
+
+        #enable RHN
+        for file in ${RHN_FILES}; do
+                ln -s "${file}" "${file%.keep}"
+        done
+}
+
+enable_spw() {
+        #disable RHN
+        for file in ${RHN_FILES}; do
+                unlink "${file%.keep}"
+        done
+
+        #enable Spacewalk
+        for file in ${SPACEWALK_FILES}; do
+                ln -s "${file}" "${file%.keep}"
+        done
+}
+
 if [[ ${VERBOSE} != 1 ]];then
 	exec 1>/dev/null
 	exec 2>/dev/null
@@ -111,6 +136,8 @@ fi
 
 case ${DIST_TARGET} in
 	RHEL5)
+		RHN_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.rhn")"
+		SPACEWALK_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.spw")"
 		REPOSYNC_REPOID="rhel-x86_64-server-5"
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel5-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel5-x86_64/metadata.in
@@ -125,6 +152,8 @@ case ${DIST_TARGET} in
 		fi
 		;;
 	RHEL7)
+		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name *.keep)"
+		SPACEWALK_FILES="/etc/sysconfig/rhn/systemid.keep /etc/sysconfig/rhn/up2date.keep"
 		REPOSYNC_REPOID="rhel-7-server-rpms"
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel7-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel7-x86_64/metadata.in
@@ -139,7 +168,8 @@ case ${DIST_TARGET} in
 		fi
 		;;
 	RHEL6|*)
-		#REPOSYNC_REPOID="rhel-x86_64-server-6 rhel-x86_64-server-supplementary-6 rhel-x86_64-server-optional-6 rhel-x86_64-server-ha-6"
+		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name *.keep)"
+		SPACEWALK_FILES="/etc/sysconfig/rhn/systemid.keep /etc/sysconfig/rhn/up2date.keep"
 		REPOSYNC_REPOID="rhel-x86_64-server-6"
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel6-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel6-x86_64/metadata.in
@@ -164,23 +194,6 @@ if [[ -z ${RSYNC_DESTIP} ]];then
 	mkdir -p ${RSYNC_DESTPATH_META}
 fi
 
-if [[ ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable && ! -f /etc/yum/pluginconf.d/rhnplugin.conf.enable ]];then
-	cd /etc/yum/pluginconf.d
-	cat << EOF >rhnplugin.conf.enable
-[main]
-enabled=1
-gpgcheck=1
-EOF
-	cat << EOF >rhnplugin.conf.disable
-[main]
-enabled=0
-gpgcheck=1
-EOF
-	rm -f rhnplugin.conf
-	ln -s rhnplugin.conf.enable rhnplugin.conf
-	cd - >/dev/null 2>&1
-fi
-
 if [[ ${CLEAN} == 0 ]];then
 	if [[ -f ${LOCKFILEPATH_BASE}/${SCRIPTNAME} ]];then
 		if [[ ${VERBOSE} != 0 ]];then
@@ -192,10 +205,8 @@ if [[ ${CLEAN} == 0 ]];then
 	touch ${LOCKFILEPATH_BASE}/${SCRIPTNAME}
 	touch ${RSYNC_DESTPATH_LOCK}/${LOCKFILENAME}
 	rsync -az --force --ignore-errors --delete ${RSYNC_DESTPATH_LOCK} ${RSYNC_DESTIP}${RSYNC_DESTPATH_LOCK}
-	rm -f /etc/yum/pluginconf.d/rhnplugin.conf
-	cd /etc/yum/pluginconf.d
-	ln -s rhnplugin.conf.enable rhnplugin.conf
-	cd - >/dev/null 2>&1
+
+	enable_rhn
 
 	for each in ${REPOSYNC_REPOID}; do
 		if [[ ${VERBOSE} != 0 ]];then
@@ -217,10 +228,8 @@ if [[ ${CLEAN} == 0 ]];then
 			done
 		fi
 	done
-	rm -f /etc/yum/pluginconf.d/rhnplugin.conf
-	cd /etc/yum/pluginconf.d
-	ln -s rhnplugin.conf.disable rhnplugin.conf
-	cd - >/dev/null 2>&1
+
+	enable_spw
 fi
 
 if [[ ${VERBOSE} != 0 ]];then
