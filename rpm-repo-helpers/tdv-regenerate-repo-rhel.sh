@@ -112,7 +112,7 @@ if [[ ${CLEAN} == 0 ]];then
 
 	CREATEREPOVERSION=`createrepo --version | cut -f2 -d' '`
 	case "${CREATEREPOVERSION}" in
-		0.9.8)
+		0.9.8|0.4.9)
 			CREATEREPOOPTION=''
 			;;
 		*)
