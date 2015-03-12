@@ -115,7 +115,7 @@ case ${DIST_TARGET} in
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel5-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel5-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn5
-		USEGETPACKAGE='getPackages'
+		USEGETPACKAGE='/getPackages'
 		LOCKFILENAME='rhel5.sh'
 		YUMCACHE_PATH='/var/cache/yum'
 		if [[ ! -z ${RSYNC_DESTIP} ]];then
@@ -125,11 +125,11 @@ case ${DIST_TARGET} in
 		fi
 		;;
 	RHEL7)
-		REPOSYNC_REPOID="rhel-x86_64-server-7"
+		REPOSYNC_REPOID="rhel-7-server-rpms"
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel7-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel7-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn7
-		USEGETPACKAGE=''
+		USEGETPACKAGE='/Packages'
 		LOCKFILENAME='rhel7.sh'
 		YUMCACHE_PATH='/var/cache/yum/x86_64/7Server'
 		if [[ ! -z ${RSYNC_DESTIP} ]];then
@@ -144,7 +144,7 @@ case ${DIST_TARGET} in
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel6-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel6-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn6
-		USEGETPACKAGE='getPackages'
+		USEGETPACKAGE='/getPackages'
 		LOCKFILENAME='rhel6.sh'
 		YUMCACHE_PATH='/var/cache/yum/x86_64/6Server'
 		if [[ ! -z ${RSYNC_DESTIP} ]];then
