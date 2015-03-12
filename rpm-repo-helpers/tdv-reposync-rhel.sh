@@ -51,6 +51,8 @@ USEMETA=1
 VERBOSE=0
 CLEAN=0
 DIST_TARGET='RHEL6'
+SPACEWALK_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.spw")"
+
 
 OPTS=$( getopt -o hcvp:r:li:t:n -l help,clean,verbose,path:,repo:,lock,iprsync:,target:,nometa -- "$@" )
 if [[ $? != 0 ]]; then
@@ -108,24 +110,24 @@ done
 enable_rhn() {
         #disable Spacewalk
         for file in ${SPACEWALK_FILES}; do
-                unlink "${file%.keep}"
+                unlink "${file%.spw}"
         done
 
         #enable RHN
         for file in ${RHN_FILES}; do
-                ln -s "${file}" "${file%.keep}"
+                ln -s "${file}" "${file%.rhn}"
         done
 }
 
 enable_spw() {
         #disable RHN
         for file in ${RHN_FILES}; do
-                unlink "${file%.keep}"
+                unlink "${file%.rhn}"
         done
 
         #enable Spacewalk
         for file in ${SPACEWALK_FILES}; do
-                ln -s "${file}" "${file%.keep}"
+                ln -s "${file}" "${file%.spw}"
         done
 }
 
@@ -137,7 +139,6 @@ fi
 case ${DIST_TARGET} in
 	RHEL5)
 		RHN_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.rhn")"
-		SPACEWALK_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.spw")"
 		REPOSYNC_REPOID="rhel-x86_64-server-5"
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel5-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel5-x86_64/metadata.in
@@ -152,8 +153,7 @@ case ${DIST_TARGET} in
 		fi
 		;;
 	RHEL7)
-		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name *.keep)"
-		SPACEWALK_FILES="/etc/sysconfig/rhn/systemid.keep /etc/sysconfig/rhn/up2date.keep"
+		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name "*.rhn")"
 		REPOSYNC_REPOID="rhel-7-server-rpms"
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel7-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel7-x86_64/metadata.in
@@ -168,13 +168,12 @@ case ${DIST_TARGET} in
 		fi
 		;;
 	RHEL6|*)
-		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name *.keep)"
-		SPACEWALK_FILES="/etc/sysconfig/rhn/systemid.keep /etc/sysconfig/rhn/up2date.keep"
-		REPOSYNC_REPOID="rhel-x86_64-server-6"
+		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name "*.rhn")"
+		REPOSYNC_REPOID="rhel-6-server-rpms"
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel6-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel6-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn6
-		USEGETPACKAGE='/getPackages'
+		USEGETPACKAGE='/Packages'
 		LOCKFILENAME='rhel6.sh'
 		YUMCACHE_PATH='/var/cache/yum/x86_64/6Server'
 		if [[ ! -z ${RSYNC_DESTIP} ]];then
@@ -207,6 +206,7 @@ if [[ ${CLEAN} == 0 ]];then
 	rsync -az --force --ignore-errors --delete ${RSYNC_DESTPATH_LOCK} ${RSYNC_DESTIP}${RSYNC_DESTPATH_LOCK}
 
 	enable_rhn
+	yum clean all
 
 	for each in ${REPOSYNC_REPOID}; do
 		if [[ ${VERBOSE} != 0 ]];then
