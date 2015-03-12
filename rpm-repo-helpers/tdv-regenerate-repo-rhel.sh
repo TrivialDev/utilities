@@ -21,7 +21,7 @@
 ##
 
 function usage() {
-	echo "$0 [-h|--help] [-v|--verbose] [-c|--clean] [-p|--path repository_path] [-r|--repo repository] [-l|--lock lockpath] [-n|--nometa]"
+	echo "$0 [-h|--help] [-v|--verbose] [-c|--clean] [-p|--path repository_path] [-r|--repo repository] [-l|--lock lockpath] [-n|--nometa] [-t|--target distribution]"
 	echo " -h|--help    : print this help & exit."
 	echo " -v|--verbose : print more informations."
 	echo " -c|--clean   : remove lock file & exit."
@@ -29,8 +29,9 @@ function usage() {
 	echo " -r|--repo    : regenerate repo for this repository only. Default is all repositories found in /data/httpd/rhel6-x86_64"
 	echo " -l|--lock    : set lockpath. Default is /var/run. If you use another path, set correct path for rsync daemon."
 	echo " -n|--nometa  : disable the use of metadata. Result: the yum list-security plugin will return empty."
+	echo " -t|--target  : select the distribution you target. i.e. RHEL5, RHEL6, RHEL7. RHEL6 is the default"
 	echo "example:"
-	echo "  Regenerate the updates.dev repository"
+	echo "  Regenerate the updates.dev repository in a specific path for RHEL6"
 	echo "  $0 -v -p /data/httpd/el6-x86_64 -r updates.dev"
 }
 
@@ -41,7 +42,9 @@ CLEAN=0
 USEMETA=1
 VERBOSE=0
 REPOID=''
-OPTS=$( getopt -o hcvp:r:ln -l help,clean,verbose,path:,repo:,lock,nometa -- "$@" )
+DIST_TARGET='RHEL6'
+
+OPTS=$( getopt -o hcvp:r:lt:n -l help,clean,verbose,path:,repo:,lock,target:,nometa -- "$@" )
 if [[ $? != 0 ]]; then
 	echo "Missing getopt or wrong arguments."
 	usage
@@ -78,6 +81,10 @@ while true ; do
 			USEMETA=0
 			shift 1
 			;;
+		-t|--target)
+			DIST_TARGET=$2
+			shift 2
+			;;
 		--)
 			shift
 			break
@@ -90,12 +97,27 @@ if [[ ${VERBOSE} != 1 ]]; then
 	exec 2>/dev/null
 fi
 
-if [[ ! -d ${LOCKFILEPATH_BASE}/rsync/rhn6 ]];then
-	mkdir -p ${LOCKFILEPATH_BASE}/rsync/rhn6
+case ${DIST_TARGET} in
+	RHEL5)
+		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn5
+		LOCKFILENAME='rhel5.sh'
+		;;
+	RHEL7)
+		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn7
+		LOCKFILENAME='rhel7.sh'
+		;;
+	RHEL6|*)
+		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn6
+		LOCKFILENAME='rhel6.sh'
+		;;
+esac
+
+if [[ ! -d ${RSYNC_DESTPATH_LOCK} ]];then
+	mkdir -p ${RSYNC_DESTPATH_LOCK}
 fi
 
 if [[ ${CLEAN} == 0 ]];then
-	if [[ -f ${LOCKFILEPATH_BASE}/rsync/rhn6/rhel6.sh || -f ${LOCKFILEPATH_BASE}/${SCRIPTNAME} ]];then
+	if [[ -f ${RSYNC_DESTPATH_LOCK}/${LOCKFILENAME} || -f ${LOCKFILEPATH_BASE}/${SCRIPTNAME} ]];then
 		if [[ ${VERBOSE} != 0 ]];then
 			echo "Already running or sync from rhn in action"
 		fi
