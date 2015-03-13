@@ -52,6 +52,7 @@ VERBOSE=0
 CLEAN=0
 DIST_TARGET='RHEL6'
 SPACEWALK_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.spw")"
+REPOSYNC_REPOID=''
 
 
 OPTS=$( getopt -o hcvp:r:li:t:n -l help,clean,verbose,path:,repo:,lock,iprsync:,target:,nometa -- "$@" )
@@ -139,7 +140,9 @@ fi
 case ${DIST_TARGET} in
 	RHEL5)
 		RHN_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.rhn")"
-		REPOSYNC_REPOID="rhel-x86_64-server-5"
+		if [[ -z ${REPOSYNC_REPOID} ]];  then
+			REPOSYNC_REPOID="rhel-x86_64-server-5"
+		fi
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel5-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel5-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn5
@@ -154,7 +157,9 @@ case ${DIST_TARGET} in
 		;;
 	RHEL7)
 		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name "*.rhn")"
-		REPOSYNC_REPOID="rhel-7-server-rpms"
+		if [[ -z ${REPOSYNC_REPOID} ]];  then
+			REPOSYNC_REPOID="rhel-7-server-rpms"
+		fi
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel7-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel7-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn7
@@ -169,7 +174,9 @@ case ${DIST_TARGET} in
 		;;
 	RHEL6|*)
 		RHN_FILES="$(find /etc/pki/entitlement/ -type f -name "*.rhn")"
-		REPOSYNC_REPOID="rhel-6-server-rpms"
+		if [[ -z ${REPOSYNC_REPOID} ]];  then
+			REPOSYNC_REPOID="rhel-6-server-rpms"
+		fi
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel6-x86_64/updates.in/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel6-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn6
@@ -188,12 +195,12 @@ if [[ ! -d ${RSYNC_DESTPATH_LOCK} ]];then
 	mkdir -p ${RSYNC_DESTPATH_LOCK}
 fi
 
-if [[ -z ${RSYNC_DESTIP} ]];then
-	mkdir -p ${RSYNC_DESTPATH_PACKAGES}
-	mkdir -p ${RSYNC_DESTPATH_META}
-fi
-
 if [[ ${CLEAN} == 0 ]];then
+	if [[ -z ${RSYNC_DESTIP} ]];then
+		mkdir -p ${RSYNC_DESTPATH_PACKAGES}
+		mkdir -p ${RSYNC_DESTPATH_META}
+	fi
+
 	if [[ -f ${LOCKFILEPATH_BASE}/${SCRIPTNAME} ]];then
 		if [[ ${VERBOSE} != 0 ]];then
 			echo "Already sync from rhn in action"
@@ -203,7 +210,9 @@ if [[ ${CLEAN} == 0 ]];then
 
 	touch ${LOCKFILEPATH_BASE}/${SCRIPTNAME}
 	touch ${RSYNC_DESTPATH_LOCK}/${LOCKFILENAME}
-	rsync -az --force --ignore-errors --delete ${RSYNC_DESTPATH_LOCK} ${RSYNC_DESTIP}${RSYNC_DESTPATH_LOCK}
+	if [[ ! -z ${RSYNC_DESTIP} ]]; then
+		rsync -az --force --ignore-errors --delete ${RSYNC_DESTPATH_LOCK} ${RSYNC_DESTIP}${RSYNC_DESTPATH_LOCK}
+	fi
 
 	enable_rhn
 	yum clean all
@@ -213,7 +222,7 @@ if [[ ${CLEAN} == 0 ]];then
 			echo "Sync rpms for channel "${each}
 		fi
 		mkdir -p ${REPOSYNC_PATH}/${each}${USEGETPACKAGE}
-		reposync ${REPOMETAOPTION} -p ${REPOSYNC_PATH} --repoid=${each} -a x86_64 -l
+		reposync -p ${REPOSYNC_PATH} --repoid=${each} -a x86_64 -l
 		reposync -p ${REPOSYNC_PATH} --repoid=${each} -a i686 -l
 		rsync -az --force --progress --ignore-errors ${REPOSYNC_PATH}/${each}${USEGETPACKAGE}/ ${RSYNC_DESTIP}${RSYNC_DESTPATH_PACKAGES}
 		if [[ ${USEMETA} != 0 ]];then
@@ -222,9 +231,9 @@ if [[ ${CLEAN} == 0 ]];then
 			if [[ ${VERBOSE} != 0 ]];then
 				echo "Sync metadata for channel "${each}
 			fi
-			for updatefile in `ls -1 ${YUMCACHE_PATH}/$each/ |grep 'updateinfo.xml.gz'`; do
-				rsync -az --force --progress --ignore-errors ${YUMCACHE_PATH}/$each/${updatefile} ${RSYNC_DESTIP}${RSYNC_DESTPATH_META}
-				rm -f ${YUMCACHE_PATH}/$each/${updatefile}
+			for updatefile in "$(find ${YUMCACHE_PATH}/$each/ -type f -name "*updateinfo.xml.gz")"; do
+				rsync -az --force --progress --ignore-errors ${updatefile} ${RSYNC_DESTIP}${RSYNC_DESTPATH_META}
+				rm -f ${updatefile}
 			done
 		fi
 	done

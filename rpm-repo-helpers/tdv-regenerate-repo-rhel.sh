@@ -20,6 +20,12 @@
 # along with TrivialDev Utilities. If not, see <http://www.gnu.org/licenses/>.
 ##
 
+##
+# This script allows you to rebuild repositories
+# RHEL5, RHEL6 & RHEL7 supported
+# With this script you can use Spacewalk server at an alternative to RedHat Official Satellite.
+##
+
 function usage() {
 	echo "$0 [-h|--help] [-v|--verbose] [-c|--clean] [-p|--path repository_path] [-r|--repo repository] [-l|--lock lockpath] [-n|--nometa] [-t|--target distribution]"
 	echo " -h|--help    : print this help & exit."
@@ -124,12 +130,12 @@ if [[ ${CLEAN} == 0 ]];then
 		exit 0
 	fi
 
-	LSUPDATESINFOXMLGZ=`ls -1 ${REPOPATH_BASE}/metadata.in/ | grep updateinfo.xml.gz`
+	LSUPDATESINFOXMLGZ="$(find ${REPOPATH_BASE}/metadata.in -type f -name "*updateinfo.xml.gz")"
 	if [[ ${USEMETA} != 0 && -z ${LSUPDATESINFOXMLGZ} ]];then
 		if [[ ${VERBOSE} != 0 ]];then
 			echo "Missing metadata."
 		fi
-		exit 0
+		exit 1
 	fi
 
 	CREATEREPOVERSION=`createrepo --version | cut -f2 -d' '`
@@ -145,54 +151,54 @@ if [[ ${CLEAN} == 0 ]];then
 	touch ${LOCKFILEPATH_BASE}/${SCRIPTNAME}
 
 	if [[ 'z'${REPOID} == 'z' ]];then
-		REPOID=`ls -1 ${REPOPATH_BASE} | grep -v 'metadata.in'`
+		REPOID="$(find ${REPOPATH_BASE} -maxdepth 1 -type d -name "updates.*" -exec basename {} \;)"
+	elif [[ ! -d ${REPOID} ]]; then
+		if [[ ${VERBOSE} != 0 ]];then
+			echo "Unknown REPOID: check directory"
+		fi
+		exit 1
 	fi
 
 	if [[ ${USEMETA} != 0 ]];then
 		for each in ${REPOID}; do
-			if [[ ${each} != 'os' && ${each} != 'tierces' ]]; then
+			if [[ ${each} != 'tierces' ]]; then
 				cp -f ${REPOPATH_BASE}/metadata.in/*updateinfo.xml.gz ${REPOPATH_BASE}/${each}/
 			fi
 		done
 	fi
 
 	for repo in ${REPOID}; do
-		if [[ ${repo} != 'os' ]]; then
+		if [[ ${VERBOSE} != 0 ]];then
+			echo "Generate repository for "${repo}
+		fi
+		cd ${REPOPATH_BASE}/${repo}
+		rm -rf repodata
+		createrepo ${CREATEREPOOPTION} .
+		if [[ ${USEMETA} != 0 ]];then
 			if [[ ${VERBOSE} != 0 ]];then
-				echo "Generate repository for "${repo}
+				echo "Adding metadata in repository "${repo}
 			fi
-			cd ${REPOPATH_BASE}/${repo}
-			rm -rf repodata
-			createrepo ${CREATEREPOOPTION} .
-			if [[ ${USEMETA} != 0 ]];then
-				if [[ ${VERBOSE} != 0 ]];then
-					echo "Adding metadata in repository "${repo}
-				fi
-				echo '<?xml version="1.0" encoding="UTF-8"?>' >updateinfo.xml
-				echo '<updates>' >> updateinfo.xml
-				for updatefile in `ls -1tr |grep updateinfo.xml.gz`; do
-					gunzip -f ${updatefile}
-					sed -i -e 's|<updates>||' -e 's|</updates>||' -e '/xml version="1.0" encoding="UTF-8"/d' ${updatefile%.gz}
-					cat ${updatefile%.gz} >> updateinfo.xml
-					rm ${updatefile%.gz}
-				done
-				echo '</updates>' >> updateinfo.xml
-				modifyrepo updateinfo.xml repodata
-				rm updateinfo.xml
-			fi
-		else
-			if [[ ${VERBOSE} != 0 ]];then
-				echo "Repository os skipped"
-			fi
+			echo '<?xml version="1.0" encoding="UTF-8"?>' >updateinfo.xml
+			echo '<updates>' >> updateinfo.xml
+			for updatefile in `ls -1tr |grep updateinfo.xml.gz`; do
+				gunzip -f ${updatefile}
+				sed -i -e 's|<updates>||' -e 's|</updates>||' -e '/xml version="1.0" encoding="UTF-8"/d' ${updatefile%.gz}
+				cat ${updatefile%.gz} >> updateinfo.xml
+				rm ${updatefile%.gz}
+			done
+			echo '</updates>' >> updateinfo.xml
+			modifyrepo updateinfo.xml repodata
+			rm updateinfo.xml
 		fi
 	done
 
-	for each in `ls -1 ${REPOPATH_BASE}`; do
-		if [[ ${each} != 'os' && ${each} != 'updates.in' && ${each} != 'tierces' ]]; then
+	for each in ${REPOID}; do
+		if [[ ${each} != 'tierces' ]]; then
 			rm -f ${REPOPATH_BASE}/${each}/*updateinfo.xml.gz
 		fi
 	done
 	rm -f ${REPOPATH_BASE}/metadata.in/*updateinfo.xml.gz
 fi
 rm -f ${LOCKFILEPATH_BASE}/${SCRIPTNAME}
+
 exit 0
