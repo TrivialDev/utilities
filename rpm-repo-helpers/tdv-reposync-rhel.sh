@@ -27,7 +27,7 @@
 ##
 
 function usage() {
-	echo "$0 [-h|--help] [-v|--verbose] [-c|--clean] [-p|--path repository_path] [-r|--repo repository] [-l|--lock lockpath] [-n|--nometa] [-i|--iprsync ip_address] [-t|--target distribution]"
+	echo "$0 [-h|--help] [-v|--verbose] [-c|--clean] [-p|--path repository_path] [-r|--repo repository] [-l|--lock lockpath] [-n|--nometa] [-i|--iprsync ip_address] [-t|--target distribution] [-o|--lastone]"
 	echo " -h|--help    : print this help & exit."
 	echo " -v|--verbose : print more informations."
 	echo " -c|--clean   : remove lock file & exit."
@@ -37,6 +37,7 @@ function usage() {
 	echo " -n|--nometa  : disable the retrieve of metadata. Result: the yum list-security plugin will return empty."
 	echo " -i|--iprsync : use this IP address / Hostname as rsync destination. Optional. By default, the sync stays locally."
 	echo " -t|--target  : select the distribution you target. i.e. RHEL5, RHEL6, RHEL7. RHEL6 is the default"
+	echo " -o|--lastone : download newest only per package"
 	echo "example:"
 	echo "  Sync the channel rhel-x86_64-server-6 only and rsync to another server."
 	echo "  $0 -v -r rhel-x86_64-server-6 -i distantserver.fqdn"
@@ -53,9 +54,10 @@ CLEAN=0
 DIST_TARGET='RHEL6'
 SPACEWALK_FILES="$(find /etc/sysconfig/rhn/ -maxdepth 1 -type f -name "*.spw")"
 REPOSYNC_REPOID=''
+LASTONE=''
 
 
-OPTS=$( getopt -o hcvp:r:li:t:n -l help,clean,verbose,path:,repo:,lock,iprsync:,target:,nometa -- "$@" )
+OPTS=$( getopt -o hcvp:r:li:t:no -l help,clean,verbose,path:,repo:,lock,iprsync:,target:,nometa,lastone -- "$@" )
 if [[ $? != 0 ]]; then
 	echo "Missing getopt or wrong arguments."
 	usage
@@ -99,6 +101,10 @@ while true ; do
 		-t|--target)
 			DIST_TARGET=$2
 			shift 2
+			;;
+		-o|--lastone)
+			LASTONE='-n'
+			shift 1
 			;;
 		--)
 			shift
@@ -222,8 +228,8 @@ if [[ ${CLEAN} == 0 ]];then
 			echo "Sync rpms for channel "${each}
 		fi
 		mkdir -p ${REPOSYNC_PATH}/${each}${USEGETPACKAGE}
-		reposync -p ${REPOSYNC_PATH} --repoid=${each} -a x86_64 -l
-		reposync -p ${REPOSYNC_PATH} --repoid=${each} -a i686 -l
+		reposync -p ${REPOSYNC_PATH} --repoid=${each} -a x86_64 -l ${LASTONE}
+		reposync -p ${REPOSYNC_PATH} --repoid=${each} -a i686 -l ${LASTONE}
 		rsync -az --force --progress --ignore-errors ${REPOSYNC_PATH}/${each}${USEGETPACKAGE}/ ${RSYNC_DESTIP}${RSYNC_DESTPATH_PACKAGES}
 		if [[ ${USEMETA} != 0 ]];then
 			yum --disablerepo="*" --enablerepo="${each}" clean all
