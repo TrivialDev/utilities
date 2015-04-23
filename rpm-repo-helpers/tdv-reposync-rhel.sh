@@ -151,7 +151,7 @@ case ${DIST_TARGET} in
 		RSYNC_DESTPATH_PACKAGES=/data/httpd/rhel5-x86_64/updates.in.__ARCH__/Packages
 		RSYNC_DESTPATH_META=/data/httpd/rhel5-x86_64/metadata.in
 		RSYNC_DESTPATH_LOCK=${LOCKFILEPATH_BASE}/rsync/rhn5
-		USEGETPACKAGE='/getPackages'
+		USEGETPACKAGE='/getPackage'
 		LOCKFILENAME='rhel5.sh'
 		YUMCACHE_PATH='/var/cache/yum'
 		if [[ ! -z ${RSYNC_DESTIP} ]]; then
