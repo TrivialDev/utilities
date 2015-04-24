@@ -114,27 +114,29 @@ done
 
 #subscription managing functions:
 enable_rhn() {
-        #disable Spacewalk
-        for file in ${SPACEWALK_FILES}; do
-                unlink "${file%.spw}"
-        done
+	#disable Spacewalk
+	for file in ${SPACEWALK_FILES}; do
+		unlink "${file%.spw}"
+	done
+	service osad stop
 
-        #enable RHN
-        for file in ${RHN_FILES}; do
-                ln -s "${file}" "${file%.rhn}"
-        done
+	#enable RHN
+	for file in ${RHN_FILES}; do
+		ln -s "${file}" "${file%.rhn}"
+	done
 }
 
 enable_spw() {
-        #disable RHN
-        for file in ${RHN_FILES}; do
-                unlink "${file%.rhn}"
-        done
+	#disable RHN
+	for file in ${RHN_FILES}; do
+		unlink "${file%.rhn}"
+	done
 
-        #enable Spacewalk
-        for file in ${SPACEWALK_FILES}; do
-                ln -s "${file}" "${file%.spw}"
-        done
+	#enable Spacewalk
+	for file in ${SPACEWALK_FILES}; do
+		ln -s "${file}" "${file%.spw}"
+	done
+	service osad start
 }
 
 if [[ ${VERBOSE} != 1 ]]; then
